@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Login Demo - RiskGate{% endblock %}
+{% block app_title %}🛡️ RiskGate - Login Demo{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <i class="fas fa-sign-in-alt me-2"></i>Simulate Login
+    </div>
+    <div class="card-body">
+        {% for message in messages %}
+            <div class="alert {{ message.type }}">{{ message.text|safe }}</div>
+        {% endfor %}
+        
+        <form method="POST" class="mb-4">
+            <div class="mb-3">
+                <label class="form-label fw-bold">Email:</label>
+                <input type="email" name="email" class="form-control" value="test@example.com" required>
+                <small class="text-muted">Default test user: test@example.com</small>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label fw-bold">Simulate Location:</label>
+                <select name="location" class="form-select">
+                    {% for loc in locations %}
+                        <option value="{{ loop.index0 }}">{{ loc.name }} ({{ loc.latitude }}, {{ loc.longitude }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-sign-in-alt me-2"></i>Simulate Login
+            </button>
+            
+            {% if current_user.is_authenticated %}
+            <a href="{{ url_for('main.logout') }}" class="btn btn-warning ms-2">
+                <i class="fas fa-sign-out-alt me-2"></i>Logout & Clear Session
+            </a>
+            {% endif %}
+        </form>
+        
+        {% if current_user.is_authenticated %}
+        <div class="alert alert-info mt-3">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Currently logged in as:</strong> {{ current_user.email }}<br>
+            <small>Logout and login from a different location to test impossible travel detection.</small>
+        </div>
+        {% endif %}
+        
+        <hr>
+        <div class="mt-4">
+            <h5><i class="fas fa-flask me-2"></i>Testing Tips:</h5>
+            <ul>
+                <li><strong>Step 1:</strong> Login from New York with your email</li>
+                <li><strong>Step 2:</strong> Click the "Logout & Clear Session" button above</li>
+                <li><strong>Step 3:</strong> Login again with the SAME email from Tokyo or London</li>
+                <li><strong>Step 4:</strong> Watch the risk score jump to 90+ (impossible travel detected!)</li>
+                <li><strong>Step 5:</strong> Try to add MFA - it should be blocked due to high risk</li>
+                <li><strong>Step 6:</strong> Check Security Alerts to see the impossible travel alert</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Access Blocked - RiskGate{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-ban me-2"></i>
+                        Access Blocked - Critical Security Risk
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger" role="alert">
+                        <h5 class="alert-heading">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Your session has been blocked
+                        </h5>
+                        <hr>
+                        <p class="mb-0"><strong>Reason:</strong> {{ reason }}</p>
+                        {% if risk_score %}
+                        <p class="mb-0 mt-2"><strong>Risk Score:</strong> 
+                            <span class="badge bg-danger">{{ risk_score }}</span>
+                        </p>
+                        {% endif %}
+                    </div>
+
+                    <div class="card mt-4">
+                        <div class="card-body">
+                            <h5 class="card-title">Why was I blocked?</h5>
+                            <p class="card-text">
+                                RiskGate detected a critical security risk with your login session. 
+                                This typically happens when:
+                            </p>
+                            <ul>
+                                <li><strong>Impossible Travel:</strong> You logged in from a location that's physically impossible to reach from your last login</li>
+                                <li><strong>Suspicious Activity:</strong> Multiple high-risk factors detected simultaneously</li>
+                                <li><strong>Account Protection:</strong> Automated systems detected potential account compromise</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card mt-4">
+                        <div class="card-body">
+                            <h5 class="card-title">What should I do?</h5>
+                            <ol>
+                                <li><strong>Log out</strong> and try again from your normal device/location</li>
+                                <li><strong>Contact Security</strong> if you believe this is an error</li>
+                                <li><strong>Check your account</strong> for any unauthorized access</li>
+                                <li><strong>Change your password</strong> if you suspect compromise</li>
+                            </ol>
+                            
+                            <div class="alert alert-info mt-3" role="alert">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Note:</strong> This block is temporary and will be lifted once security reviews your session. 
+                                If this was you logging in from a new location, please contact your administrator.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 text-center">
+                        <a href="{{ url_for('main.logout') }}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-sign-out-alt me-2"></i>
+                            Log Out and Try Again
+                        </a>
+                    </div>
+
+                    <div class="mt-4 text-center">
+                        <small class="text-muted">
+                            If you need immediate assistance, contact your security team.<br>
+                            Session ID: {{ session.get('login_event_id', 'N/A') }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
