@@ -38,4 +38,4 @@ def create_app(config_class=Config):
 
 
 # Import models so they are registered with SQLAlchemy
-from app import models
+from app import models, models_new

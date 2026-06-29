@@ -338,6 +338,50 @@ def detect_tap_after_risk(entra_user_id, tap_event):
     }
 
 
+def detect_new_mfa_creation(mfa_event):
+    """
+    Detect when a new MFA method is created/registered.
+    Creates informational alert for ALL new MFA additions for visibility.
+    
+    Args:
+        mfa_event: EntraMfaEvent object
+    
+    Returns:
+        Dict with:
+            - detected: Boolean
+            - reason: String explanation
+    """
+    if not is_method_added_event(mfa_event):
+        return {'detected': False, 'reason': None}
+    
+    activity_name = mfa_event.activity_name or ''
+    method_type = mfa_event.method_type or 'Unknown method'
+    created_at_str = mfa_event.created_at.strftime('%Y-%m-%d %H:%M:%S UTC')
+    
+    reason = (
+        f"New MFA/authentication method registered:\n\n"
+        f"User: {mfa_event.user_principal_name}\n"
+        f"Activity: {activity_name}\n"
+        f"Method Type: {method_type}\n"
+        f"Time: {created_at_str}\n"
+        f"Initiated By: {mfa_event.initiated_by}\n"
+    )
+    
+    if mfa_event.ip_address:
+        reason += f"IP Address: {mfa_event.ip_address}\n"
+    
+    reason += (
+        f"\nThis is an informational alert for audit purposes. "
+        f"All new MFA method registrations are logged for security monitoring. "
+        f"If this was not initiated by the user, investigate immediately."
+    )
+    
+    return {
+        'detected': True,
+        'reason': reason
+    }
+
+
 def analyze_mfa_event_for_correlation(mfa_event):
     """
     Analyze an MFA event for all correlation patterns.
@@ -382,6 +426,20 @@ def analyze_mfa_event_for_correlation(mfa_event):
                 'severity': 'critical',
                 'reason': tap_risk['reason'],
                 'related_signin_event_id': tap_risk['risky_signin'].id if tap_risk['risky_signin'] else None,
+                'related_mfa_event_id': mfa_event.id
+            })
+    
+    # Pattern 4: New MFA creation (informational - always detect)
+    # Only create alert if no critical/high severity alert already exists for this event
+    # This prevents duplicate alerts for the same event
+    if not correlation['correlated'] and not takeover['detected']:
+        new_mfa = detect_new_mfa_creation(mfa_event)
+        if new_mfa['detected']:
+            alerts.append({
+                'alert_type': 'new_mfa_method_created',
+                'severity': 'low',  # Informational only
+                'reason': new_mfa['reason'],
+                'related_signin_event_id': None,
                 'related_mfa_event_id': mfa_event.id
             })
     

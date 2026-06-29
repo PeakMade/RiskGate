@@ -51,6 +51,13 @@ instance/
 
 # Environment variables
 .env
+
+# Environment variables
+.env
+.env.local
+
+# Environment variables
+.env
 .env.local
 
 # Migration files (keep the migrations folder but ignore generated files)

@@ -12,7 +12,7 @@ Alerts are the primary output of RiskGate's correlation engine.
 from datetime import datetime
 from flask import current_app
 from app import db
-from app.models_new import SecurityAlert, UserRiskState
+from app.models_new import EntraSecurityAlert, UserRiskState
 
 
 def create_security_alert(entra_user_id, user_principal_name, alert_type, severity, 
@@ -32,7 +32,7 @@ def create_security_alert(entra_user_id, user_principal_name, alert_type, severi
     Returns:
         SecurityAlert object
     """
-    alert = SecurityAlert(
+    alert = EntraSecurityAlert(
         entra_user_id=entra_user_id,
         user_principal_name=user_principal_name,
         alert_type=alert_type,
@@ -181,9 +181,9 @@ def get_open_alerts(entra_user_id=None, severity=None, alert_type=None, limit=10
         limit: Maximum number of results
     
     Returns:
-        List of SecurityAlert objects
+        List of EntraSecurityAlert objects
     """
-    query = SecurityAlert.query.filter_by(status='open')
+    query = EntraSecurityAlert.query.filter_by(status='open')
     
     if entra_user_id:
         query = query.filter_by(entra_user_id=entra_user_id)
@@ -198,6 +198,28 @@ def get_open_alerts(entra_user_id=None, severity=None, alert_type=None, limit=10
 def get_critical_open_alerts(limit=50):
     """Get all open critical alerts."""
     return get_open_alerts(severity='critical', limit=limit)
+
+
+def create_new_mfa_creation_alert(mfa_event, detection_details):
+    """
+    Create informational alert for new MFA method creation.
+    This provides visibility into ALL MFA additions for audit purposes.
+    
+    Args:
+        mfa_event: EntraMfaEvent object
+        detection_details: Dict with detection details
+    
+    Returns:
+        SecurityAlert object or None
+    """
+    return create_security_alert(
+        entra_user_id=mfa_event.entra_user_id,
+        user_principal_name=mfa_event.user_principal_name,
+        alert_type='new_mfa_method_created',
+        severity='low',  # Informational only
+        reason=detection_details['reason'],
+        related_mfa_event_id=mfa_event.id
+    )
 
 
 def get_high_risk_users(risk_threshold=60, limit=50):

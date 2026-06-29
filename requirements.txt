@@ -4,3 +4,4 @@ Flask-Login==0.6.3
 Flask-Migrate==4.0.5
 Werkzeug==3.0.1
 user-agents==2.2.0
+python-dotenv==1.0.0

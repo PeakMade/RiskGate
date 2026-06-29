@@ -16,7 +16,7 @@ from flask import current_app
 from app import db
 from app.models_new import (
     UserIdentity, EntraSignInEvent, EntraMfaEvent,
-    UserAuthMethodSnapshot, UserRiskState
+    UserAuthMethodSnapshot, UserRiskState, EntraSecurityAlert
 )
 
 
@@ -407,8 +407,97 @@ def ingest_audit_logs_batch(audit_records):
     try:
         db.session.commit()
         current_app.logger.info(f"Audit ingestion: {stats['ingested']} new, {stats['duplicates']} duplicates, {stats['skipped']} skipped")
+        
+        # After successful ingestion, analyze new MFA events for correlation patterns
+        if stats['ingested'] > 0:
+            process_mfa_events_for_alerts()
+            
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Failed to commit audit ingestion: {e}")
+    
+    return stats
+
+
+def process_mfa_events_for_alerts(lookback_hours=24):
+    """
+    Process recent MFA events and create security alerts based on correlation patterns.
+    
+    This function analyzes MFA events for:
+    - MFA changes after risky sign-ins
+    - MFA takeover patterns (add then remove)
+    - Temporary Access Pass creation after risk
+    - New MFA method creation (informational)
+    
+    Should be called after MFA event ingestion or on a schedule.
+    
+    Args:
+        lookback_hours: How many hours of MFA events to analyze (default 24)
+    
+    Returns:
+        Dict with processing stats
+    """
+    from datetime import timedelta
+    from app.mfa_detection import analyze_mfa_event_for_correlation
+    from app.alerts import create_security_alert
+    
+    stats = {
+        'events_analyzed': 0,
+        'alerts_created': 0,
+        'errors': 0
+    }
+    
+    try:
+        # Get recent MFA events that haven't been analyzed yet
+        cutoff_time = datetime.utcnow() - timedelta(hours=lookback_hours)
+        
+        recent_mfa_events = EntraMfaEvent.query.filter(
+            EntraMfaEvent.created_at >= cutoff_time
+        ).order_by(EntraMfaEvent.created_at.desc()).all()
+        
+        for mfa_event in recent_mfa_events:
+            stats['events_analyzed'] += 1
+            
+            try:
+                # Analyze the event for all correlation patterns
+                analysis_result = analyze_mfa_event_for_correlation(mfa_event)
+                
+                # Create alerts for each detected pattern
+                for alert_data in analysis_result.get('alerts', []):
+                    # Check if alert already exists for this event
+                    existing_alert = EntraSecurityAlert.query.filter_by(
+                        related_mfa_event_id=alert_data['related_mfa_event_id'],
+                        alert_type=alert_data['alert_type']
+                    ).first()
+                    
+                    if not existing_alert:
+                        create_security_alert(
+                            entra_user_id=mfa_event.entra_user_id,
+                            user_principal_name=mfa_event.user_principal_name,
+                            alert_type=alert_data['alert_type'],
+                            severity=alert_data['severity'],
+                            reason=alert_data['reason'],
+                            related_signin_event_id=alert_data.get('related_signin_event_id'),
+                            related_mfa_event_id=alert_data.get('related_mfa_event_id')
+                        )
+                        stats['alerts_created'] += 1
+                        current_app.logger.info(
+                            f"Created {alert_data['alert_type']} alert for {mfa_event.user_principal_name}"
+                        )
+                    
+            except Exception as e:
+                stats['errors'] += 1
+                current_app.logger.error(f"Error analyzing MFA event {mfa_event.id}: {e}")
+        
+        db.session.commit()
+        current_app.logger.info(
+            f"MFA event analysis: {stats['events_analyzed']} analyzed, "
+            f"{stats['alerts_created']} alerts created, {stats['errors']} errors"
+        )
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Failed to process MFA events for alerts: {e}")
+        stats['errors'] += 1
     
     return stats
