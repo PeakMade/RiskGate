@@ -7,6 +7,18 @@ echo "Starting RiskGate application..."
 if [ -n "$WEBSITE_HOSTNAME" ]; then
     echo "Running in Azure App Service"
     
+    # Install dependencies if not already installed
+    if [ ! -d "antenv" ]; then
+        echo "Creating virtual environment and installing dependencies..."
+        python -m venv antenv
+        source antenv/bin/activate
+        pip install --upgrade pip
+        pip install -r requirements.txt
+    else
+        echo "Activating existing virtual environment..."
+        source antenv/bin/activate
+    fi
+    
     # Ensure database URL is properly formatted
     if [ -n "$DATABASE_URL" ]; then
         # Azure PostgreSQL URLs sometimes need adjustment
