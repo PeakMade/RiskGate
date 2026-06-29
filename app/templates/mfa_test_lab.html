@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1><i class="fas fa-flask me-2"></i>MFA Detection Test Lab</h1>
+            <p class="lead">Simulate different scenarios to test MFA detection capabilities</p>
+        </div>
+    </div>
+
+    <!-- Test Scenarios -->
+    <div class="row">
+        <!-- Scenario 1: Normal MFA Addition -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card border-success h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>Scenario 1: Normal MFA</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Expected Result:</strong> <span class="badge bg-info">LOW Severity Alert</span></p>
+                    <p>Simulates a legitimate user adding an MFA method during normal activity.</p>
+                    
+                    <h6 class="mt-3">Steps:</h6>
+                    <ol>
+                        <li>Sign in from a safe location (New York)</li>
+                        <li>Add a new MFA method</li>
+                        <li>System creates informational alert</li>
+                    </ol>
+
+                    <form method="POST" action="{{ url_for('main.test_normal_mfa') }}">
+                        <div class="mb-3">
+                            <label class="form-label">Test User Email:</label>
+                            <input type="email" name="email" class="form-control" 
+                                   value="testuser@example.com" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">MFA Method:</label>
+                            <select name="mfa_type" class="form-select">
+                                <option value="totp">Authenticator App (TOTP)</option>
+                                <option value="sms">SMS</option>
+                                <option value="hardware_key">Hardware Key (FIDO2)</option>
+                                <option value="passkey">Passkey</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="fas fa-play me-2"></i>Run Test
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scenario 2: Suspicious MFA After Risky Sign-in -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card border-danger h-100">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Scenario 2: Risky MFA</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Expected Result:</strong> <span class="badge bg-danger">CRITICAL Alert</span></p>
+                    <p>Simulates an attacker adding MFA after impossible travel sign-in.</p>
+                    
+                    <h6 class="mt-3">Steps:</h6>
+                    <ol>
+                        <li>Sign in from Moscow (impossible travel)</li>
+                        <li>Wait 15 minutes (simulated)</li>
+                        <li>Add new MFA method</li>
+                        <li>System detects account takeover</li>
+                    </ol>
+
+                    <form method="POST" action="{{ url_for('main.test_risky_mfa') }}">
+                        <div class="mb-3">
+                            <label class="form-label">Test User Email:</label>
+                            <input type="email" name="email" class="form-control" 
+                                   value="testuser@example.com" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Risky Location:</label>
+                            <select name="location" class="form-select">
+                                <option value="moscow">Moscow, Russia</option>
+                                <option value="beijing">Beijing, China</option>
+                                <option value="lagos">Lagos, Nigeria</option>
+                                <option value="sydney">Sydney, Australia</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">MFA Method:</label>
+                            <select name="mfa_type" class="form-select">
+                                <option value="totp">Authenticator App (TOTP)</option>
+                                <option value="sms">SMS</option>
+                                <option value="hardware_key">Hardware Key (FIDO2)</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-danger w-100">
+                            <i class="fas fa-play me-2"></i>Run Test
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scenario 3: MFA Takeover Pattern -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card border-warning h-100">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-user-secret me-2"></i>Scenario 3: Takeover Pattern</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Expected Result:</strong> <span class="badge bg-danger">CRITICAL Alert</span></p>
+                    <p>Simulates attacker adding their MFA then removing victim's MFA.</p>
+                    
+                    <h6 class="mt-3">Steps:</h6>
+                    <ol>
+                        <li>Sign in from suspicious location</li>
+                        <li>Add attacker's MFA method</li>
+                        <li>Remove victim's original MFA</li>
+                        <li>System detects takeover pattern</li>
+                    </ol>
+
+                    <form method="POST" action="{{ url_for('main.test_takeover_pattern') }}">
+                        <div class="mb-3">
+                            <label class="form-label">Test User Email:</label>
+                            <input type="email" name="email" class="form-control" 
+                                   value="testuser@example.com" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Attack Location:</label>
+                            <select name="location" class="form-select">
+                                <option value="moscow">Moscow, Russia</option>
+                                <option value="beijing">Beijing, China</option>
+                                <option value="lagos">Lagos, Nigeria</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-warning w-100">
+                            <i class="fas fa-play me-2"></i>Run Test
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Results -->
+    {% if test_results %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-clipboard-check me-2"></i>Test Results</h5>
+                </div>
+                <div class="card-body">
+                    {% if test_results.success %}
+                    <div class="alert alert-success">
+                        <h5><i class="fas fa-check-circle me-2"></i>Test Completed Successfully</h5>
+                        <p><strong>Scenario:</strong> {{ test_results.scenario }}</p>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-danger">
+                        <h5><i class="fas fa-times-circle me-2"></i>Test Failed</h5>
+                        <p>{{ test_results.error }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if test_results.steps %}
+                    <h6 class="mt-3">Actions Performed:</h6>
+                    <ul class="list-group mb-3">
+                        {% for step in test_results.steps %}
+                        <li class="list-group-item">
+                            <i class="fas fa-{{ step.icon }} me-2"></i>{{ step.description }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+
+                    {% if test_results.alerts %}
+                    <h6 class="mt-3">Alerts Generated:</h6>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Severity</th>
+                                    <th>Alert Type</th>
+                                    <th>Reason</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for alert in test_results.alerts %}
+                                <tr>
+                                    <td>
+                                        {% if alert.severity == 'critical' %}
+                                        <span class="badge bg-danger">CRITICAL</span>
+                                        {% elif alert.severity == 'high' %}
+                                        <span class="badge bg-warning">HIGH</span>
+                                        {% elif alert.severity == 'medium' %}
+                                        <span class="badge bg-info">MEDIUM</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">LOW</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ alert.alert_type }}</td>
+                                    <td>{{ alert.reason[:100] }}...</td>
+                                    <td>{{ alert.created_at.strftime('%H:%M:%S') }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+
+                    <div class="mt-3">
+                        <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary">
+                            <i class="fas fa-tachometer-alt me-2"></i>View Dashboard
+                        </a>
+                        <a href="{{ url_for('main.mfa_test_lab') }}" class="btn btn-secondary">
+                            <i class="fas fa-redo me-2"></i>Run Another Test
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Quick Actions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-tools me-2"></i>Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-primary w-100 mb-2">
+                                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <form method="POST" action="{{ url_for('main.clear_test_data') }}" class="d-inline">
+                                <button type="submit" class="btn btn-outline-warning w-100 mb-2">
+                                    <i class="fas fa-trash me-2"></i>Clear Test Data
+                                </button>
+                            </form>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url_for('main.view_alerts') }}" class="btn btn-outline-danger w-100 mb-2">
+                                <i class="fas fa-bell me-2"></i>View All Alerts
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url_for('main.view_mfa_events') }}" class="btn btn-outline-info w-100 mb-2">
+                                <i class="fas fa-mobile-alt me-2"></i>View MFA Events
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

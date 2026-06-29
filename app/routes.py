@@ -574,6 +574,398 @@ def breach_detection():
     return render_template('dashboard.html', title='Breach Detection', content=content, session_risk=get_current_session_risk())
 
 
+@bp.route('/mfa-test-lab', methods=['GET'])
+@login_required
+def mfa_test_lab():
+    """
+    MFA Detection Test Lab - Interface for testing different MFA scenarios.
+    """
+    return render_template('mfa_test_lab.html', title='MFA Test Lab', test_results=None)
+
+
+@bp.route('/test/normal-mfa', methods=['POST'])
+@login_required
+def test_normal_mfa():
+    """Test Scenario 1: Normal MFA addition (should create LOW alert)."""
+    from app.models_new import UserIdentity, EntraSignInEvent, EntraMfaEvent
+    from app.ingest import process_mfa_events_for_alerts
+    from datetime import timedelta
+    
+    email = request.form.get('email', 'testuser@example.com')
+    mfa_type = request.form.get('mfa_type', 'totp')
+    
+    test_results = {
+        'success': True,
+        'scenario': 'Normal MFA Addition',
+        'steps': [],
+        'alerts': []
+    }
+    
+    try:
+        # Step 1: Get or create user
+        user = UserIdentity.query.filter_by(user_principal_name=email).first()
+        if not user:
+            user = UserIdentity(
+                entra_user_id=f"test-{email}",
+                user_principal_name=email,
+                display_name=email.split('@')[0].title()
+            )
+            db.session.add(user)
+            db.session.commit()
+        
+        test_results['steps'].append({
+            'icon': 'user',
+            'description': f'Created/found test user: {email}'
+        })
+        
+        # Step 2: Create normal sign-in from safe location (2 hours ago)
+        signin_time = datetime.utcnow() - timedelta(hours=2)
+        signin = EntraSignInEvent(
+            microsoft_event_id=f"signin-normal-{datetime.utcnow().timestamp()}",
+            entra_user_id=user.entra_user_id,
+            user_principal_name=email,
+            created_at=signin_time,
+            ip_address="203.0.113.10",
+            country="United States",
+            city="New York",
+            latitude=40.7128,
+            longitude=-74.0060,
+            status="success",
+            local_risk_score=10,
+            local_risk_level="low"
+        )
+        db.session.add(signin)
+        db.session.commit()
+        
+        test_results['steps'].append({
+            'icon': 'sign-in-alt',
+            'description': f'Created normal sign-in from New York (2 hours ago, risk score: 10)'
+        })
+        
+        # Step 3: Create MFA registration event (now)
+        mfa_event = EntraMfaEvent(
+            microsoft_event_id=f"mfa-normal-{datetime.utcnow().timestamp()}",
+            entra_user_id=user.entra_user_id,
+            user_principal_name=email,
+            created_at=datetime.utcnow(),
+            activity_name="User registered security info",
+            operation_type="Add",
+            method_type="PhoneAppNotification" if mfa_type == 'totp' else mfa_type,
+            initiated_by=email,
+            ip_address="203.0.113.10"
+        )
+        db.session.add(mfa_event)
+        db.session.commit()
+        
+        test_results['steps'].append({
+            'icon': 'mobile-alt',
+            'description': f'Added {mfa_type.upper()} MFA method'
+        })
+        
+        # Step 4: Process MFA events for alerts
+        stats = process_mfa_events_for_alerts(lookback_hours=24)
+        
+        test_results['steps'].append({
+            'icon': 'bell',
+            'description': f'Analyzed MFA events: {stats["alerts_created"]} alerts created'
+        })
+        
+        # Get alerts created
+        from app.models_new import EntraSecurityAlert
+        alerts = EntraSecurityAlert.query.filter_by(
+            entra_user_id=user.entra_user_id
+        ).order_by(EntraSecurityAlert.created_at.desc()).limit(3).all()
+        
+        test_results['alerts'] = alerts
+        
+    except Exception as e:
+        test_results['success'] = False
+        test_results['error'] = str(e)
+        current_app.logger.error(f"Test failed: {e}")
+    
+    return render_template('mfa_test_lab.html', title='MFA Test Lab', test_results=test_results)
+
+
+@bp.route('/test/risky-mfa', methods=['POST'])
+@login_required
+def test_risky_mfa():
+    """Test Scenario 2: MFA addition after risky sign-in (should create CRITICAL alert)."""
+    from app.models_new import UserIdentity, EntraSignInEvent, EntraMfaEvent
+    from app.ingest import process_mfa_events_for_alerts
+    from datetime import timedelta
+    
+    email = request.form.get('email', 'testuser@example.com')
+    location = request.form.get('location', 'moscow')
+    mfa_type = request.form.get('mfa_type', 'totp')
+    
+    # Location details
+    locations = {
+        'moscow': {'city': 'Moscow', 'country': 'Russia', 'lat': 55.7558, 'lon': 37.6173},
+        'beijing': {'city': 'Beijing', 'country': 'China', 'lat': 39.9042, 'lon': 116.4074},
+        'lagos': {'city': 'Lagos', 'country': 'Nigeria', 'lat': 6.5244, 'lon': 3.3792},
+        'sydney': {'city': 'Sydney', 'country': 'Australia', 'lat': -33.8688, 'lon': 151.2093}
+    }
+    loc = locations.get(location, locations['moscow'])
+    
+    test_results = {
+        'success': True,
+        'scenario': 'MFA After Risky Sign-in',
+        'steps': [],
+        'alerts': []
+    }
+    
+    try:
+        # Step 1: Get or create user
+        user = UserIdentity.query.filter_by(user_principal_name=email).first()
+        if not user:
+            user = UserIdentity(
+                entra_user_id=f"test-{email}",
+                user_principal_name=email,
+                display_name=email.split('@')[0].title()
+            )
+            db.session.add(user)
+            db.session.commit()
+        
+        test_results['steps'].append({
+            'icon': 'user',
+            'description': f'Created/found test user: {email}'
+        })
+        
+        # Step 2: Create risky sign-in with impossible travel (1 hour ago)
+        signin_time = datetime.utcnow() - timedelta(hours=1)
+        signin = EntraSignInEvent(
+            microsoft_event_id=f"signin-risky-{datetime.utcnow().timestamp()}",
+            entra_user_id=user.entra_user_id,
+            user_principal_name=email,
+            created_at=signin_time,
+            ip_address="45.142.212.100",
+            country=loc['country'],
+            city=loc['city'],
+            latitude=loc['lat'],
+            longitude=loc['lon'],
+            status="success",
+            impossible_travel_detected=True,
+            required_travel_speed_mph=8500,
+            local_risk_score=85,
+            local_risk_level="high",
+            local_risk_reasons='["Impossible travel detected", "High-risk location"]'
+        )
+        db.session.add(signin)
+        db.session.commit()
+        
+        test_results['steps'].append({
+            'icon': 'plane',
+            'description': f'Created risky sign-in from {loc["city"]}, {loc["country"]} (impossible travel: 8500 mph, risk score: 85)'
+        })
+        
+        # Step 3: Create MFA registration 15 minutes after risky sign-in
+        mfa_time = signin_time + timedelta(minutes=15)
+        mfa_event = EntraMfaEvent(
+            microsoft_event_id=f"mfa-risky-{datetime.utcnow().timestamp()}",
+            entra_user_id=user.entra_user_id,
+            user_principal_name=email,
+            created_at=mfa_time,
+            activity_name="User registered security info",
+            operation_type="Add",
+            method_type="PhoneAppNotification" if mfa_type == 'totp' else mfa_type,
+            initiated_by=email,
+            ip_address="45.142.212.100"
+        )
+        db.session.add(mfa_event)
+        db.session.commit()
+        
+        test_results['steps'].append({
+            'icon': 'mobile-alt',
+            'description': f'Added {mfa_type.upper()} MFA method 15 minutes after risky sign-in'
+        })
+        
+        # Step 4: Process MFA events for alerts
+        stats = process_mfa_events_for_alerts(lookback_hours=24)
+        
+        test_results['steps'].append({
+            'icon': 'exclamation-triangle',
+            'description': f'Detection system analyzed events: {stats["alerts_created"]} CRITICAL alerts expected'
+        })
+        
+        # Get alerts created
+        from app.models_new import EntraSecurityAlert
+        alerts = EntraSecurityAlert.query.filter_by(
+            entra_user_id=user.entra_user_id
+        ).order_by(EntraSecurityAlert.created_at.desc()).limit(5).all()
+        
+        test_results['alerts'] = alerts
+        
+    except Exception as e:
+        test_results['success'] = False
+        test_results['error'] = str(e)
+        current_app.logger.error(f"Test failed: {e}")
+    
+    return render_template('mfa_test_lab.html', title='MFA Test Lab', test_results=test_results)
+
+
+@bp.route('/test/takeover-pattern', methods=['POST'])
+@login_required
+def test_takeover_pattern():
+    """Test Scenario 3: MFA takeover pattern (add then remove)."""
+    from app.models_new import UserIdentity, EntraSignInEvent, EntraMfaEvent
+    from app.ingest import process_mfa_events_for_alerts
+    from datetime import timedelta
+    
+    email = request.form.get('email', 'testuser@example.com')
+    location = request.form.get('location', 'moscow')
+    
+    locations = {
+        'moscow': {'city': 'Moscow', 'country': 'Russia', 'lat': 55.7558, 'lon': 37.6173},
+        'beijing': {'city': 'Beijing', 'country': 'China', 'lat': 39.9042, 'lon': 116.4074},
+        'lagos': {'city': 'Lagos', 'country': 'Nigeria', 'lat': 6.5244, 'lon': 3.3792}
+    }
+    loc = locations.get(location, locations['moscow'])
+    
+    test_results = {
+        'success': True,
+        'scenario': 'MFA Takeover Pattern',
+        'steps': [],
+        'alerts': []
+    }
+    
+    try:
+        # Step 1: Get or create user
+        user = UserIdentity.query.filter_by(user_principal_name=email).first()
+        if not user:
+            user = UserIdentity(
+                entra_user_id=f"test-{email}",
+                user_principal_name=email,
+                display_name=email.split('@')[0].title()
+            )
+            db.session.add(user)
+            db.session.commit()
+        
+        test_results['steps'].append({
+            'icon': 'user',
+            'description': f'Created/found test user: {email}'
+        })
+        
+        # Step 2: Risky sign-in
+        signin_time = datetime.utcnow() - timedelta(minutes=30)
+        signin = EntraSignInEvent(
+            microsoft_event_id=f"signin-takeover-{datetime.utcnow().timestamp()}",
+            entra_user_id=user.entra_user_id,
+            user_principal_name=email,
+            created_at=signin_time,
+            ip_address="45.142.212.100",
+            country=loc['country'],
+            city=loc['city'],
+            latitude=loc['lat'],
+            longitude=loc['lon'],
+            status="success",
+            impossible_travel_detected=True,
+            required_travel_speed_mph=9000,
+            local_risk_score=90,
+            local_risk_level="critical",
+            local_risk_reasons='["Impossible travel detected", "Extreme speed required"]'
+        )
+        db.session.add(signin)
+        db.session.commit()
+        
+        test_results['steps'].append({
+            'icon': 'plane',
+            'description': f'Attacker sign-in from {loc["city"]} (impossible travel)'
+        })
+        
+        # Step 3: Attacker adds their MFA
+        mfa_add_time = signin_time + timedelta(minutes=10)
+        mfa_add = EntraMfaEvent(
+            microsoft_event_id=f"mfa-add-{datetime.utcnow().timestamp()}",
+            entra_user_id=user.entra_user_id,
+            user_principal_name=email,
+            created_at=mfa_add_time,
+            activity_name="User registered security info",
+            operation_type="Add",
+            method_type="PhoneAppNotification",
+            initiated_by=email,
+            ip_address="45.142.212.100"
+        )
+        db.session.add(mfa_add)
+        db.session.commit()
+        
+        test_results['steps'].append({
+            'icon': 'plus-circle',
+            'description': 'Attacker adds their MFA method'
+        })
+        
+        # Step 4: Attacker removes victim's MFA
+        mfa_remove_time = mfa_add_time + timedelta(minutes=5)
+        mfa_remove = EntraMfaEvent(
+            microsoft_event_id=f"mfa-remove-{datetime.utcnow().timestamp()}",
+            entra_user_id=user.entra_user_id,
+            user_principal_name=email,
+            created_at=mfa_remove_time,
+            activity_name="User deleted security info",
+            operation_type="Delete",
+            method_type="PhoneAppNotification",
+            initiated_by=email,
+            ip_address="45.142.212.100"
+        )
+        db.session.add(mfa_remove)
+        db.session.commit()
+        
+        test_results['steps'].append({
+            'icon': 'minus-circle',
+            'description': 'Attacker removes victim\'s original MFA method'
+        })
+        
+        # Step 5: Process for alerts
+        stats = process_mfa_events_for_alerts(lookback_hours=24)
+        
+        test_results['steps'].append({
+            'icon': 'user-secret',
+            'description': f'Takeover pattern detected: {stats["alerts_created"]} CRITICAL alerts'
+        })
+        
+        # Get alerts
+        from app.models_new import EntraSecurityAlert
+        alerts = EntraSecurityAlert.query.filter_by(
+            entra_user_id=user.entra_user_id
+        ).order_by(EntraSecurityAlert.created_at.desc()).limit(5).all()
+        
+        test_results['alerts'] = alerts
+        
+    except Exception as e:
+        test_results['success'] = False
+        test_results['error'] = str(e)
+        current_app.logger.error(f"Test failed: {e}")
+    
+    return render_template('mfa_test_lab.html', title='MFA Test Lab', test_results=test_results)
+
+
+@bp.route('/test/clear-data', methods=['POST'])
+@login_required
+def clear_test_data():
+    """Clear all test data from the database."""
+    from app.models_new import UserIdentity, EntraSignInEvent, EntraMfaEvent, EntraSecurityAlert
+    
+    try:
+        # Delete test data for testuser@example.com
+        test_users = UserIdentity.query.filter(
+            UserIdentity.user_principal_name.like('%testuser%')
+        ).all()
+        
+        for user in test_users:
+            EntraSecurityAlert.query.filter_by(entra_user_id=user.entra_user_id).delete()
+            EntraMfaEvent.query.filter_by(entra_user_id=user.entra_user_id).delete()
+            EntraSignInEvent.query.filter_by(entra_user_id=user.entra_user_id).delete()
+            db.session.delete(user)
+        
+        db.session.commit()
+        current_app.logger.info("Test data cleared successfully")
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Failed to clear test data: {e}")
+    
+    return redirect(url_for('main.mfa_test_lab'))
+
+
 # Override geolocation in utils when simulated location is set
 from app import utils
 _original_get_geolocation = utils.get_geolocation

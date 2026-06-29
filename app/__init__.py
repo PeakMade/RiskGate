@@ -34,8 +34,24 @@ def create_app(config_class=Config):
     from app.routes import bp as main_bp
     app.register_blueprint(main_bp)
     
+    # Log startup info
+    with app.app_context():
+        app.logger.info(f"RiskGate starting with database: {app.config['SQLALCHEMY_DATABASE_URI'][:50]}...")
+        app.logger.info(f"Azure Client ID configured: {'Yes' if app.config.get('AZURE_CLIENT_ID') else 'No'}")
+        app.logger.info(f"Azure Client Secret configured: {'Yes' if app.config.get('AZURE_CLIENT_SECRET') else 'No'}")
+    
     return app
 
 
 # Import models so they are registered with SQLAlchemy
-from app import models, models_new
+try:
+    from app import models, models_new
+except Exception as e:
+    import logging
+    logging.error(f"Error importing models: {e}")
+    # Still import at least the base models
+    try:
+        from app import models
+    except Exception as e2:
+        logging.error(f"Critical error importing base models: {e2}")
+        raise

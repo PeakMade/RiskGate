@@ -28,9 +28,17 @@ class Config:
     # Secret key for session management and CSRF protection
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
     
-    # Database configuration - using SQLite for local development
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'sqlite:///' + os.path.join(basedir, 'riskgate.db')
+    # Database configuration
+    database_url = os.environ.get('DATABASE_URL')
+    if database_url:
+        # Azure PostgreSQL fix: postgres:// -> postgresql://
+        if database_url.startswith('postgres://'):
+            database_url = database_url.replace('postgres://', 'postgresql://', 1)
+        SQLALCHEMY_DATABASE_URI = database_url
+    else:
+        # Use SQLite for local development
+        SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'riskgate.db')
+    
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Session configuration
@@ -86,5 +94,6 @@ class Config:
     # MFA correlation settings
     MFA_CORRELATION_LOOKBACK_MINUTES = 60  # Correlate MFA changes within this window after risky sign-in
     MFA_TAKEOVER_DETECTION_HOURS = 24      # Look for add-then-remove patterns within this window
+    MFA_TRUST_PERIOD_HOURS = 24            # Trust device after MFA validation for this period
     HIGH_PRIVILEGE_RISK_THRESHOLD = 30
     HIGH_PRIVILEGE_ROLES = ['admin', 'finance', 'security']  # Roles requiring stricter security
