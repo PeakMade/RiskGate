@@ -307,3 +307,186 @@ def get_previous_successful_login(user_id):
     print(f"=== END GET PREVIOUS ===\n")
     
     return result
+
+
+def detect_cross_user_breach_patterns(hours=24):
+    """
+    Detect breach patterns across multiple users.
+    Indicators: Multiple users with impossible travel in same time window.
+    
+    Args:
+        hours: Time window to analyze (default 24 hours)
+    
+    Returns:
+        Dict with keys:
+            - is_breach_likely: Boolean
+            - affected_users_count: Integer
+            - affected_user_ids: List of user IDs
+            - severity: String (low, medium, high, critical)
+            - reason: String description
+    """
+    cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+    
+    # Find all users with impossible travel in the time window
+    impossible_travel_logins = LoginEvent.query.filter(
+        LoginEvent.timestamp >= cutoff_time,
+        LoginEvent.success == True,
+        db.or_(
+            LoginEvent.risk_reason.like('%impossible_travel%'),
+            LoginEvent.risk_reason.like('%extreme_impossible_travel%')
+        )
+    ).all()
+    
+    # Get unique user IDs
+    affected_user_ids = list(set([login.user_id for login in impossible_travel_logins]))
+    affected_count = len(affected_user_ids)
+    
+    # Determine if this is likely a breach
+    is_breach_likely = False
+    severity = 'low'
+    reason = f'{affected_count} user(s) with impossible travel in last {hours} hours'
+    
+    if affected_count >= 5:
+        is_breach_likely = True
+        severity = 'critical'
+        reason = f'BREACH ALERT: {affected_count} users showing impossible travel patterns - possible credential stuffing attack'
+    elif affected_count >= 3:
+        is_breach_likely = True
+        severity = 'high'
+        reason = f'Multiple users ({affected_count}) with impossible travel - investigate for breach'
+    elif affected_count >= 2:
+        severity = 'medium'
+        reason = f'{affected_count} users with impossible travel - monitor for escalation'
+    
+    return {
+        'is_breach_likely': is_breach_likely,
+        'affected_users_count': affected_count,
+        'affected_user_ids': affected_user_ids,
+        'severity': severity,
+        'reason': reason,
+        'time_window_hours': hours
+    }
+
+
+def get_mfa_creation_after_risky_login(user_id, hours=1):
+    """
+    Check if user created MFA methods shortly after a risky login.
+    This is a key indicator of account takeover.
+    
+    Args:
+        user_id: User ID to check
+        hours: Time window after risky login to check for MFA creation
+    
+    Returns:
+        Dict with keys:
+            - correlation_found: Boolean
+            - risky_login: LoginEvent object or None
+            - mfa_events: List of MfaEvent objects
+            - time_between_minutes: Float or None
+            - is_suspicious: Boolean
+    """
+    from app.models import MfaEvent
+    
+    # Find risky logins (risk score >= 60) in last 24 hours
+    cutoff_time = datetime.utcnow() - timedelta(hours=24)
+    risky_login = LoginEvent.query.filter(
+        LoginEvent.user_id == user_id,
+        LoginEvent.timestamp >= cutoff_time,
+        LoginEvent.success == True,
+        LoginEvent.risk_score >= 60
+    ).order_by(LoginEvent.timestamp.desc()).first()
+    
+    if not risky_login:
+        return {
+            'correlation_found': False,
+            'risky_login': None,
+            'mfa_events': [],
+            'time_between_minutes': None,
+            'is_suspicious': False
+        }
+    
+    # Check for MFA creation within X hours after the risky login
+    mfa_window_end = risky_login.timestamp + timedelta(hours=hours)
+    mfa_events = MfaEvent.query.filter(
+        MfaEvent.user_id == user_id,
+        MfaEvent.timestamp >= risky_login.timestamp,
+        MfaEvent.timestamp <= mfa_window_end,
+        MfaEvent.event_type == 'create'
+    ).all()
+    
+    correlation_found = len(mfa_events) > 0
+    time_between_minutes = None
+    
+    if correlation_found and mfa_events:
+        # Calculate time between risky login and first MFA creation
+        first_mfa = mfa_events[0]
+        time_delta = first_mfa.timestamp - risky_login.timestamp
+        time_between_minutes = time_delta.total_seconds() / 60
+    
+    # Consider it suspicious if MFA was created within 30 minutes of risky login
+    is_suspicious = correlation_found and (time_between_minutes is not None and time_between_minutes <= 30)
+    
+    return {
+        'correlation_found': correlation_found,
+        'risky_login': risky_login,
+        'mfa_events': mfa_events,
+        'time_between_minutes': time_between_minutes,
+        'is_suspicious': is_suspicious
+    }
+
+
+def get_all_users_with_risky_mfa_correlation(hours=24):
+    """
+    Get all users who had risky logins followed by MFA creation.
+    Used for breach detection dashboard.
+    
+    Args:
+        hours: Time window to analyze
+    
+    Returns:
+        List of dicts, each containing:
+            - user_id: Integer
+            - user_email: String
+            - risky_login: LoginEvent
+            - mfa_events: List of MfaEvent
+            - time_between_minutes: Float
+            - risk_score: Integer
+    """
+    from app.models import User, MfaEvent
+    
+    cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+    
+    # Find all risky logins
+    risky_logins = LoginEvent.query.filter(
+        LoginEvent.timestamp >= cutoff_time,
+        LoginEvent.success == True,
+        LoginEvent.risk_score >= 60
+    ).order_by(LoginEvent.timestamp.desc()).all()
+    
+    correlations = []
+    
+    for login in risky_logins:
+        # Check if MFA was created within 1 hour after this risky login
+        mfa_window_end = login.timestamp + timedelta(hours=1)
+        mfa_events = MfaEvent.query.filter(
+            MfaEvent.user_id == login.user_id,
+            MfaEvent.timestamp >= login.timestamp,
+            MfaEvent.timestamp <= mfa_window_end,
+            MfaEvent.event_type == 'create'
+        ).all()
+        
+        if mfa_events:
+            user = User.query.get(login.user_id)
+            time_delta = mfa_events[0].timestamp - login.timestamp
+            time_between_minutes = time_delta.total_seconds() / 60
+            
+            correlations.append({
+                'user_id': login.user_id,
+                'user_email': user.email if user else 'Unknown',
+                'risky_login': login,
+                'mfa_events': mfa_events,
+                'time_between_minutes': round(time_between_minutes, 1),
+                'risk_score': login.risk_score
+            })
+    
+    return correlations

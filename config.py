@@ -31,14 +31,30 @@ class Config:
     
     # Session configuration
     PERMANENT_SESSION_LIFETIME = timedelta(hours=2)
-    SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
+    # SESSION_COOKIE_SECURE set dynamically below based on environment
     
     # Microsoft Graph API configuration
-    AZURE_TENANT_ID = os.environ.get('AZURE_TENANT_ID')
-    AZURE_CLIENT_ID = os.environ.get('AZURE_CLIENT_ID')
+    AZURE_TENANT_ID = os.environ.get('AZURE_TENANT_ID', 'ea0cd29c-45e6-4ad1-94ff-2e9f36fb84b5')
+    AZURE_CLIENT_ID = os.environ.get('AZURE_CLIENT_ID', '99b0438f-6b8c-41ff-86ee-0116481883ea')
     AZURE_CLIENT_SECRET = os.environ.get('AZURE_CLIENT_SECRET')
+    
+    # Application URL (auto-detect local vs production)
+    WEBSITE_HOSTNAME = os.environ.get('WEBSITE_HOSTNAME')  # Azure App Service sets this
+    if WEBSITE_HOSTNAME:
+        APP_URL = f"https://{WEBSITE_HOSTNAME}"
+        SESSION_COOKIE_SECURE = True  # Require HTTPS for cookies in production
+    else:
+        APP_URL = 'https://127.0.0.1:5003'  # Local development with self-signed cert
+        SESSION_COOKIE_SECURE = True
+    
+    PRODUCTION_URL = 'https://riskgate-e6f4c2gac0a3bjfr.eastus-01.azurewebsites.net'
+    
+    # MSAL Authentication configuration
+    MSAL_AUTHORITY = f"https://login.microsoftonline.com/{AZURE_TENANT_ID}"
+    MSAL_REDIRECT_PATH = "/auth/callback"  # Must match Azure App Registration
+    MSAL_SCOPE = ["User.Read"]  # Basic user profile scope
     
     # Data ingestion settings
     SIGNIN_LOGS_HOURS_BACK = 24  # How many hours of sign-in logs to fetch
@@ -67,3 +83,4 @@ class Config:
     MFA_CORRELATION_LOOKBACK_MINUTES = 60  # Correlate MFA changes within this window after risky sign-in
     MFA_TAKEOVER_DETECTION_HOURS = 24      # Look for add-then-remove patterns within this window
     HIGH_PRIVILEGE_RISK_THRESHOLD = 30
+    HIGH_PRIVILEGE_ROLES = ['admin', 'finance', 'security']  # Roles requiring stricter security

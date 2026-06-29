@@ -1,64 +1,121 @@
 {% extends "base.html" %}
 
-{% block title %}Login Demo - RiskGate{% endblock %}
-{% block app_title %}🛡️ RiskGate - Login Demo{% endblock %}
+{% block title %}Sign In - RiskGate{% endblock %}
+{% block app_title %}🛡️ RiskGate - Identity Security Monitoring{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header">
-        <i class="fas fa-sign-in-alt me-2"></i>Simulate Login
-    </div>
-    <div class="card-body">
-        {% for message in messages %}
-            <div class="alert {{ message.type }}">{{ message.text|safe }}</div>
-        {% endfor %}
-        
-        <form method="POST" class="mb-4">
-            <div class="mb-3">
-                <label class="form-label fw-bold">Email:</label>
-                <input type="email" name="email" class="form-control" value="test@example.com" required>
-                <small class="text-muted">Default test user: test@example.com</small>
+<div class="row">
+    <!-- Microsoft Sign In -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fab fa-microsoft me-2"></i>Production Authentication</h5>
             </div>
-            
-            <div class="mb-3">
-                <label class="form-label fw-bold">Simulate Location:</label>
-                <select name="location" class="form-select">
-                    {% for loc in locations %}
-                        <option value="{{ loop.index0 }}">{{ loc.name }} ({{ loc.latitude }}, {{ loc.longitude }})</option>
-                    {% endfor %}
-                </select>
+            <div class="card-body d-flex flex-column">
+                {% for message in messages %}
+                    <div class="alert {{ message.type }} mb-3">{{ message.text|safe }}</div>
+                {% endfor %}
+                
+                {% if not current_user.is_authenticated %}
+                    <p class="text-muted mb-4">Authenticate with your Microsoft/Entra ID account</p>
+                    <div class="text-center">
+                        <a href="{{ url_for('main.auth_login') }}" class="btn btn-primary btn-lg">
+                            <i class="fab fa-microsoft me-2"></i>Sign in with Microsoft
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="alert alert-success mb-3">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>Authenticated:</strong> {{ current_user.email }}
+                    </div>
+                    
+                    {% if session_risk %}
+                    <div class="alert alert-{% if session_risk.risk_score >= 90 %}danger{% elif session_risk.risk_score >= 60 %}warning{% elif session_risk.risk_score >= 30 %}info{% else %}success{% endif %} mb-3">
+                        <strong>Risk Score:</strong> {{ session_risk.risk_score }} 
+                        <span class="badge bg-{% if session_risk.risk_score >= 90 %}danger{% elif session_risk.risk_score >= 60 %}warning{% elif session_risk.risk_score >= 30 %}info{% else %}success{% endif %}">
+                            {{ session_risk.risk_level }}
+                        </span>
+                        {% if session_risk.risk_reasons %}
+                            <br><small>{{ ', '.join(session_risk.risk_reasons) }}</small>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-grid gap-2 mt-auto">
+                        <a href="{{ url_for('main.mfa_add') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-shield-alt me-2"></i>Manage MFA
+                        </a>
+                        <a href="{{ url_for('main.breach_detection') }}" class="btn btn-outline-danger">
+                            <i class="fas fa-shield-virus me-2"></i>Breach Detection
+                        </a>
+                        <a href="{{ url_for('main.alerts') }}" class="btn btn-outline-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Security Alerts
+                        </a>
+                        <a href="{{ url_for('main.mfa_events') }}" class="btn btn-outline-info">
+                            <i class="fas fa-history me-2"></i>MFA Events
+                        </a>
+                        <a href="{{ url_for('main.login_events') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-list me-2"></i>Login History
+                        </a>
+                        <a href="{{ url_for('main.logout') }}" class="btn btn-outline-danger">
+                            <i class="fas fa-sign-out-alt me-2"></i>Sign Out
+                        </a>
+                    </div>
+                {% endif %}
             </div>
-            
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-sign-in-alt me-2"></i>Simulate Login
-            </button>
-            
-            {% if current_user.is_authenticated %}
-            <a href="{{ url_for('main.logout') }}" class="btn btn-warning ms-2">
-                <i class="fas fa-sign-out-alt me-2"></i>Logout & Clear Session
-            </a>
-            {% endif %}
-        </form>
-        
-        {% if current_user.is_authenticated %}
-        <div class="alert alert-info mt-3">
-            <i class="fas fa-info-circle me-2"></i>
-            <strong>Currently logged in as:</strong> {{ current_user.email }}<br>
-            <small>Logout and login from a different location to test impossible travel detection.</small>
         </div>
-        {% endif %}
-        
-        <hr>
-        <div class="mt-4">
-            <h5><i class="fas fa-flask me-2"></i>Testing Tips:</h5>
-            <ul>
-                <li><strong>Step 1:</strong> Login from New York with your email</li>
-                <li><strong>Step 2:</strong> Click the "Logout & Clear Session" button above</li>
-                <li><strong>Step 3:</strong> Login again with the SAME email from Tokyo or London</li>
-                <li><strong>Step 4:</strong> Watch the risk score jump to 90+ (impossible travel detected!)</li>
-                <li><strong>Step 5:</strong> Try to add MFA - it should be blocked due to high risk</li>
-                <li><strong>Step 6:</strong> Check Security Alerts to see the impossible travel alert</li>
-            </ul>
+    </div>
+
+    <!-- Testing Simulator -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow h-100 border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-flask me-2"></i>Testing Simulator</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning mb-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Demo Mode:</strong> Simulate logins from different locations to test impossible travel detection
+                </div>
+                
+                <form method="POST" action="{{ url_for('main.simulate_login') }}">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Email</label>
+                        <input type="email" name="email" class="form-control" value="test@example.com" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Simulate Location</label>
+                        <select name="location" class="form-select">
+                            <option value="0">🗽 New York, USA</option>
+                            <option value="1">🗼 Paris, France</option>
+                            <option value="2">🗾 Tokyo, Japan</option>
+                            <option value="3">🏛️ London, UK</option>
+                            <option value="4">🌉 San Francisco, USA</option>
+                            <option value="5">🕌 Dubai, UAE</option>
+                        </select>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-play me-2"></i>Simulate Login
+                        </button>
+                    </div>
+                </form>
+                
+                <hr class="my-4">
+                
+                <div class="small">
+                    <h6 class="fw-bold mb-2"><i class="fas fa-lightbulb me-2"></i>How to Test:</h6>
+                    <ol class="mb-0">
+                        <li>Login from <strong>New York</strong></li>
+                        <li>Logout immediately</li>
+                        <li>Login from <strong>Tokyo</strong> with same email</li>
+                        <li>Risk score should spike to <span class="badge bg-danger">90+</span></li>
+                        <li>Try adding MFA - it will be blocked</li>
+                    </ol>
+                </div>
+            </div>
         </div>
     </div>
 </div>

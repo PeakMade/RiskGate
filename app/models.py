@@ -26,6 +26,10 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(50), default='user')  # user, admin, finance, security
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
+    # Microsoft/Entra ID integration
+    entra_user_id = db.Column(db.String(255), unique=True, nullable=True, index=True)  # Object ID from Entra ID
+    auth_method = db.Column(db.String(50), default='local')  # local, msal, or both
+    
     # Relationships
     login_events = db.relationship('LoginEvent', backref='user', lazy='dynamic', 
                                    cascade='all, delete-orphan')

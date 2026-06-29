@@ -99,8 +99,8 @@
             <img src="{{ url_for('static', filename='Peakmade_logo.png') }}" alt="PeakMade Logo" style="height: 40px; width: auto;">
         </div>
 
-        <div style="flex: 1; display: flex; justify-content: center; align-items: center; height: 80px;">
-            <h1 style="font-size: 28px; font-family: 'Open Sans', Arial, sans-serif; font-weight: 700; color: #fff; margin: 0; letter-spacing: 2px; text-shadow: 0 2px 6px rgba(0,0,0,0.12); line-height: 80px;">
+        <div style="flex: 1; display: flex; justify-content: center; align-items: center; height: 80px; padding: 0 20px;">
+            <h1 style="font-size: 24px; font-family: 'Open Sans', Arial, sans-serif; font-weight: 700; color: #fff; margin: 0; letter-spacing: 1px; text-shadow: 0 2px 6px rgba(0,0,0,0.12); line-height: 1.3; text-align: center;">
                 {% block app_title %}🛡️ RiskGate Security{% endblock %}
             </h1>
         </div>
@@ -130,6 +130,9 @@
         <div class="mb-3">
             <a href="{{ url_for('main.mfa_add') }}" class="btn btn-sm btn-outline-primary me-2">
                 <i class="fas fa-shield-alt"></i> MFA
+            </a>
+            <a href="{{ url_for('main.breach_detection') }}" class="btn btn-sm btn-outline-danger me-2">
+                <i class="fas fa-shield-virus"></i> Breach Detection
             </a>
             <a href="{{ url_for('main.alerts') }}" class="btn btn-sm btn-outline-warning me-2">
                 <i class="fas fa-exclamation-triangle"></i> Alerts
