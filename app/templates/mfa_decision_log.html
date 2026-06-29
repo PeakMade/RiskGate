@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1><i class="fas fa-clipboard-list me-2"></i>MFA Setup Decision Log</h1>
+            <p class="lead">View real-time decision-making for MFA method creation</p>
+        </div>
+    </div>
+
+    <!-- Current Session Status -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card {% if session_risk['risk_score'] >= 60 %}border-danger{% elif session_risk['risk_score'] >= 30 %}border-warning{% else %}border-success{% endif %}">
+                <div class="card-header {% if session_risk['risk_score'] >= 60 %}bg-danger{% elif session_risk['risk_score'] >= 30 %}bg-warning{% else %}bg-success{% endif %} text-white">
+                    <h5 class="mb-0"><i class="fas fa-tachometer-alt me-2"></i>Current Session Status</h5>
+                </div>
+                <div class="card-body">
+                    <h3 class="mb-3">
+                        Risk Score: <span class="badge bg-{% if session_risk['risk_score'] >= 60 %}danger{% elif session_risk['risk_score'] >= 30 %}warning{% else %}success{% endif %}">
+                            {{ session_risk['risk_score'] }}
+                        </span>
+                        <small class="text-muted">{{ session_risk['risk_level'] }}</small>
+                    </h3>
+                    
+                    <h6>Decision Criteria:</h6>
+                    <ul class="list-group mb-3">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Risk Score < 60 (Required for MFA setup)
+                            {% if session_risk['risk_score'] < 60 %}
+                            <span class="badge bg-success">✓ PASS</span>
+                            {% else %}
+                            <span class="badge bg-danger">✗ FAIL</span>
+                            {% endif %}
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            No Recent Impossible Travel
+                            {% if not has_impossible_travel %}
+                            <span class="badge bg-success">✓ PASS</span>
+                            {% else %}
+                            <span class="badge bg-danger">✗ FAIL</span>
+                            {% endif %}
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            No Active Critical Alerts
+                            {% if not has_active_alerts %}
+                            <span class="badge bg-success">✓ PASS</span>
+                            {% else %}
+                            <span class="badge bg-danger">✗ FAIL</span>
+                            {% endif %}
+                        </li>
+                    </ul>
+
+                    <div class="alert {% if mfa_allowed %}alert-success{% else %}alert-danger{% endif %}">
+                        <h5>
+                            {% if mfa_allowed %}
+                            <i class="fas fa-check-circle me-2"></i>MFA Setup: ALLOWED
+                            {% else %}
+                            <i class="fas fa-ban me-2"></i>MFA Setup: BLOCKED
+                            {% endif %}
+                        </h5>
+                        {% if not mfa_allowed %}
+                        <p class="mb-0"><strong>Reason:</strong> {{ block_reason }}</p>
+                        {% endif %}
+                    </div>
+
+                    {% if mfa_allowed %}
+                    <a href="{{ url_for('main.mfa_add') }}" class="btn btn-primary w-100">
+                        <i class="fas fa-plus me-2"></i>Add MFA Method
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>How It Works</h5>
+                </div>
+                <div class="card-body">
+                    <h6>MFA Setup Decision Process:</h6>
+                    <ol>
+                        <li><strong>Check Session Risk Score</strong>
+                            <ul>
+                                <li>If risk ≥ 60: BLOCK</li>
+                                <li>Based on: impossible travel, new device, new country</li>
+                            </ul>
+                        </li>
+                        <li><strong>Check Recent Impossible Travel</strong>
+                            <ul>
+                                <li>Look back 24 hours</li>
+                                <li>If found: BLOCK</li>
+                            </ul>
+                        </li>
+                        <li><strong>Check Active Alerts</strong>
+                            <ul>
+                                <li>Look for critical/high severity alerts</li>
+                                <li>If found: BLOCK</li>
+                            </ul>
+                        </li>
+                        <li><strong>All Checks Pass</strong>
+                            <ul>
+                                <li>ALLOW MFA setup</li>
+                                <li>Log the decision</li>
+                            </ul>
+                        </li>
+                    </ol>
+
+                    <div class="alert alert-warning">
+                        <small><i class="fas fa-shield-alt me-2"></i>This prevents attackers from adding their own MFA methods after compromising an account.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Decision Logs -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent MFA Decision Logs</h5>
+                </div>
+                <div class="card-body">
+                    {% if decision_logs %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>User</th>
+                                    <th>Decision</th>
+                                    <th>Risk Score</th>
+                                    <th>Reason</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in decision_logs %}
+                                <tr>
+                                    <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                    <td>{{ log.user_email }}</td>
+                                    <td>
+                                        {% if log.blocked %}
+                                        <span class="badge bg-danger">BLOCKED</span>
+                                        {% else %}
+                                        <span class="badge bg-success">ALLOWED</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ log.risk_score }}</td>
+                                    <td>{{ log.reason or 'Session safe for MFA changes' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>No MFA decision logs yet. Try adding an MFA method to generate logs.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Scenarios -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-flask me-2"></i>Test Different Scenarios</h5>
+                </div>
+                <div class="card-body">
+                    <p>Simulate different risk levels to see how MFA setup decisions change:</p>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <form method="POST" action="{{ url_for('main.simulate_safe_session') }}">
+                                <div class="card border-success mb-3">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Safe Session</h6>
+                                        <p class="card-text small">Risk Score: 0<br>No threats detected</p>
+                                        <button type="submit" class="btn btn-success w-100">Simulate</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <form method="POST" action="{{ url_for('main.simulate_medium_risk') }}">
+                                <div class="card border-warning mb-3">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Medium Risk</h6>
+                                        <p class="card-text small">Risk Score: 40<br>New device detected</p>
+                                        <button type="submit" class="btn btn-warning w-100">Simulate</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <form method="POST" action="{{ url_for('main.simulate_high_risk') }}">
+                                <div class="card border-danger mb-3">
+                                    <div class="card-body">
+                                        <h6 class="card-title">High Risk</h6>
+                                        <p class="card-text small">Risk Score: 85<br>Impossible travel</p>
+                                        <button type="submit" class="btn btn-danger w-100">Simulate</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

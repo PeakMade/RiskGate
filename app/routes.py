@@ -966,6 +966,75 @@ def clear_test_data():
     return redirect(url_for('main.mfa_test_lab'))
 
 
+@bp.route('/mfa-decision-log', methods=['GET'])
+@login_required
+def mfa_decision_log():
+    """Show MFA setup decision-making process and logs."""
+    from app.mfa_protection import can_create_mfa
+    
+    session_risk = get_current_session_risk()
+    
+    # Check if MFA would be allowed
+    check_result = can_create_mfa(current_user, session_risk['risk_score'])
+    
+    # Check for recent impossible travel
+    from app.risk import has_recent_impossible_travel
+    has_impossible = has_recent_impossible_travel(current_user.id, hours=24)
+    
+    # Check for active critical alerts
+    from app.security_events import has_active_high_security_alert
+    has_alerts = has_active_high_security_alert(current_user.id)
+    
+    # Get recent MFA decision logs
+    decision_logs = MfaEvent.query.filter_by(
+        user_id=current_user.id
+    ).order_by(MfaEvent.timestamp.desc()).limit(20).all()
+    
+    return render_template(
+        'mfa_decision_log.html',
+        title='MFA Decision Log',
+        session_risk=session_risk,
+        mfa_allowed=check_result['allowed'],
+        block_reason=check_result.get('reason'),
+        has_impossible_travel=has_impossible,
+        has_active_alerts=has_alerts,
+        decision_logs=decision_logs
+    )
+
+
+@bp.route('/simulate-safe-session', methods=['POST'])
+@login_required
+def simulate_safe_session():
+    """Simulate a safe session with low risk."""
+    session['risk_score'] = 0
+    session['risk_level'] = 'low'
+    session['risk_reasons'] = []
+    current_app.logger.info(f"Simulated SAFE session for {current_user.email}")
+    return redirect(url_for('main.mfa_decision_log'))
+
+
+@bp.route('/simulate-medium-risk', methods=['POST'])
+@login_required
+def simulate_medium_risk():
+    """Simulate a medium risk session."""
+    session['risk_score'] = 40
+    session['risk_level'] = 'medium'
+    session['risk_reasons'] = ['New device detected', 'New browser']
+    current_app.logger.info(f"Simulated MEDIUM RISK session for {current_user.email}")
+    return redirect(url_for('main.mfa_decision_log'))
+
+
+@bp.route('/simulate-high-risk', methods=['POST'])
+@login_required
+def simulate_high_risk():
+    """Simulate a high risk session with impossible travel."""
+    session['risk_score'] = 85
+    session['risk_level'] = 'high'
+    session['risk_reasons'] = ['Impossible travel detected', 'Required speed: 8500 mph', 'High-risk location']
+    current_app.logger.info(f"Simulated HIGH RISK session for {current_user.email}")
+    return redirect(url_for('main.mfa_decision_log'))
+
+
 # Override geolocation in utils when simulated location is set
 from app import utils
 _original_get_geolocation = utils.get_geolocation

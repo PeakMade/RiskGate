@@ -82,6 +82,7 @@ class Config:
     # Risk score values for different events
     RISK_SCORE_NEW_DEVICE = 20
     RISK_SCORE_NEW_COUNTRY = 20
+    RISK_SCORE_NEW_ACCOUNT = 15        # Account created recently
     RISK_SCORE_IMPOSSIBLE_TRAVEL = 40  # Standard impossible travel (500-1000 mph)
     RISK_SCORE_EXTREME_TRAVEL = 70     # Extreme impossible travel (>1000 mph)
     RISK_SCORE_MICROSOFT_MEDIUM = 30   # Microsoft risk level: medium
@@ -97,3 +98,8 @@ class Config:
     MFA_TRUST_PERIOD_HOURS = 24            # Trust device after MFA validation for this period
     HIGH_PRIVILEGE_RISK_THRESHOLD = 30
     HIGH_PRIVILEGE_ROLES = ['admin', 'finance', 'security']  # Roles requiring stricter security
+    
+    # New account protection
+    NEW_ACCOUNT_THRESHOLD_DAYS = 7         # Accounts newer than this are flagged
+    NEW_ACCOUNT_MFA_RESTRICTION_DAYS = 3   # Can't change MFA for first N days
+    NEW_ACCOUNT_WITH_RISK_ALERT = True     # Alert if new account has any risk factors
