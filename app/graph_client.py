@@ -99,6 +99,11 @@ class GraphClient:
             response = requests.get(url, headers=headers, params=params, timeout=60)
             response.raise_for_status()
             return response.json()
+        except requests.exceptions.HTTPError as e:
+            current_app.logger.error(f"Graph API HTTP error for {url}: {e}")
+            current_app.logger.error(f"Response status: {response.status_code}")
+            current_app.logger.error(f"Response body: {response.text[:500]}")
+            return None
         except Exception as e:
             current_app.logger.error(f"Graph API request failed for {url}: {e}")
             return None
@@ -126,14 +131,20 @@ class GraphClient:
         }
         
         current_app.logger.info(f"Fetching sign-in logs from last {hours_back} hours...")
+        current_app.logger.debug(f"Graph API URL: {url}")
+        current_app.logger.debug(f"Filter params: {params}")
         
         result = self._make_request(url, params)
         if result and 'value' in result:
             signin_logs = result['value']
             current_app.logger.info(f"Fetched {len(signin_logs)} sign-in log entries")
+            if signin_logs:
+                # Log sample of users found
+                sample_users = set([log.get('userPrincipalName', 'Unknown')[:50] for log in signin_logs[:5]])
+                current_app.logger.info(f"Sample users in logs: {sample_users}")
             return signin_logs
         
-        current_app.logger.warning("No sign-in logs retrieved")
+        current_app.logger.warning(f"No sign-in logs retrieved. Result: {result}")
         return []
     
     def fetch_audit_logs(self, hours_back=24, category='UserManagement', max_results=1000):

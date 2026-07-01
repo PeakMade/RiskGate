@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block title %}RiskGate Dashboard{% endblock %}
+{% block app_title %}🛡️ RiskGate Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2">
+    
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show py-2 mb-2" role="alert">
+                    <small>{{ message }}</small>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Results Section -->
+    <div class="card mb-2 shadow-sm">
+        <div class="card-body p-2">
+            <div class="row align-items-center">
+                <!-- Impossible Logins Card -->
+                <div class="col-md-3">
+                    <div class="alert alert-danger mb-0 py-1 px-2" style="border-left: 3px solid #dc3545;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <small class="text-muted d-block" style="font-size: 0.75rem;">Impossible Logins</small>
+                                <h4 class="mb-0" style="font-weight: 700;">{{ impossible_logins_count }}</h4>
+                            </div>
+                            <div>
+                                <i class="fas fa-plane" style="opacity: 0.3; font-size: 1.5rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Target User Display -->
+                <div class="col-md-5">
+                    <div class="alert alert-light mb-0 py-1 px-2" style="border-left: 3px solid #6c757d;">
+                        <small class="text-muted d-block" style="font-size: 0.75rem;">Monitoring User</small>
+                        <div style="font-weight: 600; font-size: 0.9rem;">
+                            <i class="fas fa-user-circle me-1"></i>{{ target_user }}
+                        </div>
+                        {% if last_scan %}
+                        <small class="text-muted" style="font-size: 0.7rem;">
+                            <i class="fas fa-clock me-1"></i>Last scan: {{ last_scan }}
+                        </small>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="col-md-4">
+                    <form method="POST" action="{{ url_for('main.scan_entra') }}" class="mb-0">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-sm flex-fill" style="font-weight: 600; font-size: 0.85rem;">
+                                <i class="fas fa-search me-1"></i>Scan Entra
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm flex-fill" style="font-weight: 600; font-size: 0.85rem;"
+                                    onclick="document.getElementById('reportForm').submit();">
+                                <i class="fas fa-envelope me-1"></i>Report
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Hidden form for report action -->
+    <form id="reportForm" method="POST" action="{{ url_for('main.report_findings') }}" style="display: none;">
+    </form>
+
+
+    <!-- Recent Scan Results / Alerts Section -->
+    <div class="card shadow-sm">
+        <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 6px 12px;">
+            <small class="mb-0" style="font-weight: 600;">
+                <i class="fas fa-exclamation-triangle me-1"></i>Recent Alerts
+            </small>
+        </div>
+        <div class="card-body p-0">
+            
+            <!-- TODO: Replace with actual data from EntraSecurityAlert table -->
+            <!-- These placeholder rows demonstrate the layout for real scan results -->
+            
+            {% if recent_alerts %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0" style="font-size: 0.85rem;">
+                        <thead style="background-color: #f8f9fa;">
+                            <tr>
+                                <th scope="col" style="padding: 6px 8px; font-weight: 600;">Time</th>
+                                <th scope="col" style="padding: 6px 8px; font-weight: 600;">User</th>
+                                <th scope="col" style="padding: 6px 8px; font-weight: 600;">Finding</th>
+                                <th scope="col" style="padding: 6px 8px; font-weight: 600;">Risk</th>
+                                <th scope="col" style="padding: 6px 8px; font-weight: 600;">Details</th>
+                                <th scope="col" style="padding: 6px 8px; font-weight: 600;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for alert in recent_alerts %}
+                                <tr>
+                                    <td style="padding: 6px 8px;">{{ alert.time }}</td>
+                                    <td style="padding: 6px 8px;">
+                                        <i class="fas fa-user-circle me-1" style="color: #6c757d; font-size: 0.75rem;"></i>
+                                        <span style="font-size: 0.8rem;">{{ alert.user }}</span>
+                                    </td>
+                                    <td style="padding: 6px 8px;">
+                                        <span class="badge" style="background-color: #dc3545; font-size: 0.75rem; padding: 2px 6px;">
+                                            {{ alert.finding }}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 6px 8px;">
+                                        {% if alert.risk_level == 'Critical' %}
+                                            <span class="badge bg-danger" style="font-size: 0.75rem; padding: 2px 6px;">
+                                                {{ alert.risk_level }}
+                                            </span>
+                                        {% elif alert.risk_level == 'High' %}
+                                            <span class="badge bg-warning text-dark" style="font-size: 0.75rem; padding: 2px 6px;">
+                                                {{ alert.risk_level }}
+                                            </span>
+                                        {% elif alert.risk_level == 'Medium' %}
+                                            <span class="badge bg-info" style="font-size: 0.75rem; padding: 2px 6px;">
+                                                {{ alert.risk_level }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary" style="font-size: 0.75rem; padding: 2px 6px;">
+                                                {{ alert.risk_level }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="padding: 6px 8px; font-size: 0.8rem;">{{ alert.details }}</td>
+                                    <td style="padding: 6px 8px;">
+                                        {% if alert.status == 'Open' %}
+                                            <span class="badge bg-danger" style="font-size: 0.75rem; padding: 2px 6px;">
+                                                {{ alert.status }}
+                                            </span>
+                                        {% elif alert.status == 'Investigating' %}
+                                            <span class="badge bg-warning text-dark" style="font-size: 0.75rem; padding: 2px 6px;">
+                                                {{ alert.status }}
+                                            </span>
+                                        {% elif alert.status == 'Resolved' %}
+                                            <span class="badge bg-success" style="font-size: 0.75rem; padding: 2px 6px;">
+                                                {{ alert.status }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary" style="font-size: 0.75rem; padding: 2px 6px;">
+                                                {{ alert.status }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="p-3 text-center text-muted">
+                    <i class="fas fa-inbox mb-1" style="opacity: 0.3; font-size: 1.5rem;"></i>
+                    <p class="mb-0" style="font-size: 0.8rem;">No alerts yet. Select a user and scan.</p>
+                </div>
+            {% endif %}
+            
+        </div>
+    </div>
+
+</div>
+
+<!-- Integration Notes (visible in HTML source for developers) -->
+<!--
+    TODO: Connect to Microsoft Entra Integration
+    
+    1. Scan Button Integration:
+       - When clicked, call Microsoft Graph API via graph_client.py
+       - Fetch sign-in logs for selected user: fetch_signin_logs()
+       - Process through ingest.py: ingest_signin_event()
+       - Risk detection runs automatically via risk_detection.py
+       - Alerts created via alerts_new.py
+       
+    2. User Selector Integration:
+       - Fetch users from Microsoft Graph API: fetch_all_users()
+       - Or fetch from UserIdentity table (app.models_new)
+       - Populate dropdown with real Entra users
+       
+    3. Recent Alerts Integration:
+       - Query EntraSecurityAlert table (app.models_new)
+       - Filter by alert_type='impossible_login'
+       - Order by created_at desc
+       - Show status (open, acknowledged, resolved, false_positive)
+       
+    4. Report Button Integration:
+       - Generate report from EntraSecurityAlert records
+       - Use Microsoft Graph API to send email
+       - POST /me/sendMail endpoint
+       - Include summary of all open alerts
+       
+    5. Results Cards Integration:
+       - Count impossible logins: EntraSignInEvent.query.filter_by(impossible_travel_detected=True).count()
+       - Future: Add MFA change counts from EntraMfaEvent
+       - Future: Add last scan timestamp
+-->
+{% endblock %}

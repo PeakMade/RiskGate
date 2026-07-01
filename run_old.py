@@ -13,6 +13,10 @@ app = create_app()
 def make_shell_context():
     """Add objects to the Flask shell context for easier testing."""
     return {}
+        'MfaEvent': MfaEvent,
+        'SecurityAlert': SecurityAlert,
+        'TrustedDevice': TrustedDevice
+    }
 
 
 if __name__ == '__main__':

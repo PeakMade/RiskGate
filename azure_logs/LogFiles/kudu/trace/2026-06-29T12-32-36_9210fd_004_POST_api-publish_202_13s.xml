@@ -1,0 +1,17 @@
+<step title="Incoming Request" date="2026-06-29T12:32:36.000" instance="9210fd" url="/api/publish?async=true&amp;deployer=GITHUB_ONE_DEPLOY&amp;type=zip&amp;message=%7B%22type%22%3A%22deployment%22%2C%22sha%22%3A%223bae04ea9b25de791d277356d39ad1d849fb461a%22%2C%22repoName%22%3A%22PeakMade%2FRiskGate%22%2C%22actor%22%3A%22PeakMade%22%2C%22slotName%22%3A%22Production%22%2C%22commitMessage%22%3A%22Add%20or%20update%20the%20Azure%20App%20Service%20build%20and%20deployment%20workflow%20config%22%7D" method="POST" type="request" pid="833,1,5" Host="riskgate-e6f4c2gac0a3bjfr.scm.eastus-01.azurewebsites.net" User-Agent="GITHUBACTIONS_DeployWebAppToAzure_979afedbeef484f44fb1ee2da21dc10bab284bd667e650f1f4739dd6a058380c_v3.0.8" Authorization="Bas..." Content-Type="application/octet-stream" Cookie="ARRAffinity=9210fd0c122fc1540c5ef9761b8a41ef990a83aba6c660ea67bdb222b82cd884;Path=/;HttpOnly;Secure;Domain=riskgate-e6f4c2gac0a3bjfr.scm.eastus-01.azurewebsites.net; ARRAffinitySameSite=9210fd0c122fc1540c5ef9761b8a41ef990a83aba6c660ea67bdb222b82cd884;Path=/;HttpOnly;SameSite=None;Secure;Domain=riskgate-e6f4c2gac0a3bjfr.scm.eastus-01.azurewebsites.net" Transfer-Encoding="chunked" X-ARR-LOG-ID="3414e223-9bbb-4a27-a393-17584e607ec1" CLIENT-IP="128.24.161.192:54272" X-SITE-DEPLOYMENT-ID="RiskGate" WAS-DEFAULT-HOSTNAME="riskgate-e6f4c2gac0a3bjfr.scm.eastus-01.azurewebsites.net" X-Forwarded-Proto="https" X-AppService-Proto="https" X-Forwarded-TlsVersion="1.3" X-WAWS-Unencoded-URL="/api/publish?async=true&amp;deployer=GITHUB_ONE_DEPLOY&amp;type=zip&amp;message=%7B%22type%22%3A%22deployment%22%2C%22sha%22%3A%223bae04ea9b25de791d277356d39ad1d849fb461a%22%2C%22repoName%22%3A%22PeakMade%2FRiskGate%22%2C%22actor%22%3A%22PeakMade%22%2C%22slotName%22%3A%22Production%22%2C%22commitMessage%22%3A%22Add%20or%20update%20the%20Azure%20App%20Service%20build%20and%20deployment%20workflow%20config%22%7D" X-Client-IP="128.24.161.192" X-Client-Port="54272" >
+  <step title="OneDeploy" date="2026-06-29T12:32:37.398" >
+    <step title="None repository commit" date="2026-06-29T12:32:37.795" >
+      <step title="Commit id: fd61e676-0119-4cf6-a791-d41a41869986" date="2026-06-29T12:32:37.862" Message="N/A" AuthorName="N/A" AuthorEmail="N/A" /><!-- duration: 78ms -->
+    </step><!-- duration: 213ms -->
+    <step title="Starting PushDeployAsync" date="2026-06-29T12:32:38.251" /><!-- duration: 65ms -->
+    <step title="Writing artifact to /tmp/zipdeploy/608b4fc6-ae81-4178-a8cb-e2789b96fc8f.zip" date="2026-06-29T12:32:38.987" >
+      <step title="Writing multipart request body to /tmp/zipdeploy/608b4fc6-ae81-4178-a8cb-e2789b96fc8f.zip" date="2026-06-29T12:32:42.511" /><!-- duration: 49ms -->
+      <step title="Writing zip file to /tmp/zipdeploy/608b4fc6-ae81-4178-a8cb-e2789b96fc8f.zip" date="2026-06-29T12:32:42.713" /><!-- duration: 1129ms -->
+    </step><!-- duration: 5267ms -->
+    <step title="Start deployment in the background" date="2026-06-29T12:32:44.787" >
+      <step title="Acquiring Deployment Lock" date="2026-06-29T12:32:45.592" /><!-- duration: 73ms -->
+      <step title="Acquired Deployment Lock" date="2026-06-29T12:32:46.712" /><!-- duration: 234ms -->
+    </step><!-- duration: 3552ms -->
+  </step><!-- duration: 11042ms -->
+  <step title="Outgoing response" date="2026-06-29T12:32:48.732" type="response" statusCode="202" statusText="Accepted" /><!-- duration: 59ms -->
+</step><!-- duration: 12812ms -->

@@ -12,42 +12,16 @@
     <!-- Current Session Status -->
     <div class="row mb-4">
         <div class="col-md-6">
-            <div class="card {% if session_risk['risk_score'] >= 60 %}border-danger{% elif session_risk['risk_score'] >= 30 %}border-warning{% else %}border-success{% endif %}">
-                <div class="card-header {% if session_risk['risk_score'] >= 60 %}bg-danger{% elif session_risk['risk_score'] >= 30 %}bg-warning{% else %}bg-success{% endif %} text-white">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
                     <h5 class="mb-0"><i class="fas fa-tachometer-alt me-2"></i>Current Session Status</h5>
                 </div>
                 <div class="card-body">
-                    <h3 class="mb-3">
-                        Risk Score: <span class="badge bg-{% if session_risk['risk_score'] >= 60 %}danger{% elif session_risk['risk_score'] >= 30 %}warning{% else %}success{% endif %}">
-                            {{ session_risk['risk_score'] }}
-                        </span>
-                        <small class="text-muted">{{ session_risk['risk_level'] }}</small>
-                    </h3>
-                    
-                    <h6>Decision Criteria:</h6>
-                    <ul class="list-group mb-3">
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Risk Score < 60 (Required for MFA setup)
-                            {% if session_risk['risk_score'] < 60 %}
-                            <span class="badge bg-success">✓ PASS</span>
-                            {% else %}
-                            <span class="badge bg-danger">✗ FAIL</span>
-                            {% endif %}
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            No Recent Impossible Travel
-                            {% if not has_impossible_travel %}
-                            <span class="badge bg-success">✓ PASS</span>
-                            {% else %}
-                            <span class="badge bg-danger">✗ FAIL</span>
-                            {% endif %}
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            No Active Critical Alerts
-                            {% if not has_active_alerts %}
-                            <span class="badge bg-success">✓ PASS</span>
-                            {% else %}
-                            <span class="badge bg-danger">✗ FAIL</span>
+                    <p class="alert alert-info">Simplified version - session risk tracking disabled</p>
+                </div>
+            </div>
+        </div>
+    </div>
                             {% endif %}
                         </li>
                     </ul>

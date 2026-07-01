@@ -111,41 +111,12 @@
 
     </div>
 
-    {% if current_user.is_authenticated %}
-    <div class="user-info">
-        <i class="fas fa-user me-2"></i>
-        <span class="user-name">{{ current_user.email }}</span>
-        {% if session_risk %}
-            <span class="ms-2">| Risk: <span class="risk-score">{{ session_risk.risk_score }}</span> ({{ session_risk.risk_level }})</span>
-        {% endif %}
-        <a href="{{ url_for('main.logout') }}" class="ms-3 text-decoration-none">
-            <i class="fas fa-sign-out-alt"></i> Logout
-        </a>
-    </div>
-    {% endif %}
+    <!-- User info removed - simplified version -->
 </header>
 
 <main class="main-content">
     <div class="content-wrapper">
-        <div class="mb-3">
-            <a href="{{ url_for('main.mfa_add') }}" class="btn btn-sm btn-outline-primary me-2">
-                <i class="fas fa-shield-alt"></i> MFA
-            </a>
-            <a href="{{ url_for('main.breach_detection') }}" class="btn btn-sm btn-outline-danger me-2">
-                <i class="fas fa-shield-virus"></i> Breach Detection
-            </a>
-            <a href="{{ url_for('main.alerts') }}" class="btn btn-sm btn-outline-warning me-2">
-                <i class="fas fa-exclamation-triangle"></i> Alerts
-            </a>
-            <a href="{{ url_for('main.mfa_events') }}" class="btn btn-sm btn-outline-info me-2">
-                <i class="fas fa-list"></i> MFA Events
-            </a>
-            {% if current_user.is_authenticated %}
-            <a href="{{ url_for('main.logout') }}" class="btn btn-sm btn-warning">
-                <i class="fas fa-sign-out-alt"></i> Logout
-            </a>
-            {% endif %}
-        </div>
+        <!-- Navigation removed - simplified version -->
 
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}

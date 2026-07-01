@@ -72,6 +72,9 @@ class Config:
     SIGNIN_LOGS_HOURS_BACK = 24  # How many hours of sign-in logs to fetch
     AUDIT_LOGS_HOURS_BACK = 24  # How many hours of audit logs to fetch
     
+    # Testing mode configuration
+    TESTING_MODE = os.environ.get('TESTING_MODE', 'true').lower() == 'true'  # Enable test authentication
+    
     # Risk score thresholds
     RISK_THRESHOLD_LOW = 29
     RISK_THRESHOLD_MEDIUM = 30

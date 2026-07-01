@@ -16,52 +16,10 @@
                     <div class="alert {{ message.type }} mb-3">{{ message.text|safe }}</div>
                 {% endfor %}
                 
-                {% if not current_user.is_authenticated %}
-                    <p class="text-muted mb-4">Authenticate with your Microsoft/Entra ID account</p>
+                <p class="text-muted mb-4">Simplified version - authentication disabled</p>
                     <div class="text-center">
-                        <a href="{{ url_for('main.auth_login') }}" class="btn btn-primary btn-lg">
-                            <i class="fab fa-microsoft me-2"></i>Sign in with Microsoft
-                        </a>
+                        <p class="alert alert-info">This is a simplified demo version without authentication.</p>
                     </div>
-                {% else %}
-                    <div class="alert alert-success mb-3">
-                        <i class="fas fa-check-circle me-2"></i>
-                        <strong>Authenticated:</strong> {{ current_user.email }}
-                    </div>
-                    
-                    {% if session_risk %}
-                    <div class="alert alert-{% if session_risk.risk_score >= 90 %}danger{% elif session_risk.risk_score >= 60 %}warning{% elif session_risk.risk_score >= 30 %}info{% else %}success{% endif %} mb-3">
-                        <strong>Risk Score:</strong> {{ session_risk.risk_score }} 
-                        <span class="badge bg-{% if session_risk.risk_score >= 90 %}danger{% elif session_risk.risk_score >= 60 %}warning{% elif session_risk.risk_score >= 30 %}info{% else %}success{% endif %}">
-                            {{ session_risk.risk_level }}
-                        </span>
-                        {% if session_risk.risk_reasons %}
-                            <br><small>{{ ', '.join(session_risk.risk_reasons) }}</small>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-                    
-                    <div class="d-grid gap-2 mt-auto">
-                        <a href="{{ url_for('main.mfa_add') }}" class="btn btn-outline-primary">
-                            <i class="fas fa-shield-alt me-2"></i>Manage MFA
-                        </a>
-                        <a href="{{ url_for('main.breach_detection') }}" class="btn btn-outline-danger">
-                            <i class="fas fa-shield-virus me-2"></i>Breach Detection
-                        </a>
-                        <a href="{{ url_for('main.alerts') }}" class="btn btn-outline-warning">
-                            <i class="fas fa-exclamation-triangle me-2"></i>Security Alerts
-                        </a>
-                        <a href="{{ url_for('main.mfa_events') }}" class="btn btn-outline-info">
-                            <i class="fas fa-history me-2"></i>MFA Events
-                        </a>
-                        <a href="{{ url_for('main.login_events') }}" class="btn btn-outline-secondary">
-                            <i class="fas fa-list me-2"></i>Login History
-                        </a>
-                        <a href="{{ url_for('main.logout') }}" class="btn btn-outline-danger">
-                            <i class="fas fa-sign-out-alt me-2"></i>Sign Out
-                        </a>
-                    </div>
-                {% endif %}
             </div>
         </div>
     </div>
@@ -70,9 +28,37 @@
     <div class="col-lg-6 mb-4">
         <div class="card shadow h-100 border-warning">
             <div class="card-header bg-warning text-dark">
-                <h5 class="mb-0"><i class="fas fa-flask me-2"></i>Testing Simulator</h5>
+                <h5 class="mb-0"><i class="fas fa-flask me-2"></i>Testing & Demo Mode</h5>
             </div>
             <div class="card-body">
+                {% if config.TESTING_MODE %}
+                <div class="alert alert-info mb-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Test Mode Active:</strong> Quick authentication available for testing
+                </div>
+                
+                <!-- Quick Test Authentication -->
+                <form method="POST" action="{{ url_for('main.test_login') }}" class="mb-4">
+                    <h6 class="fw-bold mb-3"><i class="fas fa-user-check me-2"></i>Quick Test Login</h6>
+                    <div class="mb-3">
+                        <label class="form-label">Test Email</label>
+                        <input type="email" name="email" class="form-control" value="test@example.com" required>
+                        <small class="text-muted">Use any email for testing</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Display Name</label>
+                        <input type="text" name="name" class="form-control" value="Test User" placeholder="Optional">
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-info">
+                            <i class="fas fa-sign-in-alt me-2"></i>Login as Test User
+                        </button>
+                    </div>
+                </form>
+                
+                <hr class="my-3">
+                {% endif %}
+                
                 <div class="alert alert-warning mb-3">
                     <i class="fas fa-exclamation-triangle me-2"></i>
                     <strong>Demo Mode:</strong> Simulate logins from different locations to test impossible travel detection
